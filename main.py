@@ -9,6 +9,7 @@ from crud.crudDinamico import (
     create_record,
     update_record,
     delete_record,
+    patch_record,
 )
 
 app = FastAPI()
@@ -16,7 +17,7 @@ app = FastAPI()
 class DynamicSchema(BaseModel):
     data: Dict  # Permite un diccionario dinámico de campos
 
-
+# Obtener todos los registros de una tabla
 @app.get("/{table_name}/all")
 def read_all(table_name: str, db: Session = Depends(get_db)):
     try:
@@ -27,7 +28,20 @@ def read_all(table_name: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
+# Obtener un registro por su ID
+@app.get("/{table_name}/{record_id}")
+def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db)):
+    try:
+        record = get_record_by_id(db, table_name, record_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Record not found")
+        return record
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
+# Crear un nuevo registro
 @app.post("/{table_name}")
 def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
@@ -37,63 +51,52 @@ def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
-    
 
+# Eliminar un registro
 @app.delete("/{table_name}/{record_id}")
 def delete(table_name: str, record_id: int, db: Session = Depends(get_db)):
     try:
-        # Llama a la función delete_record para eliminar el registro
         deleted = delete_record(db, table_name, record_id)
-        
-        # Si no se encontró el registro, lanza una excepción 404
         if not deleted:
             raise HTTPException(status_code=404, detail="Record not found")
-        
-        # Retorna un mensaje de éxito
         return {"message": "Record deleted successfully"}
-    
     except KeyError as e:
-        # Maneja errores de clave (por ejemplo, tabla no encontrada)
         raise HTTPException(status_code=404, detail=str(e))
-    
     except Exception as e:
-        # Maneja otros errores inesperados
         raise HTTPException(status_code=422, detail=str(e))
 
-@app.put("/{table_name}/{record_id}")  # Usa PUT para actualizaciones
+# Actualizar un registro (PUT)
+@app.put("/{table_name}/{record_id}")
 def update(
     table_name: str,
     record_id: int,
-    data: Dict,  # Recibe el cuerpo de la solicitud como un diccionario
-    db: Session = Depends(get_db)  # Inyecta la sesión de la base de datos
+    data: Dict,
+    db: Session = Depends(get_db)
 ):
     try:
-        # Llama a la función update_record para actualizar el registro
         updated_rows = update_record(db, table_name, record_id, data)
-        
-        # Si no se encontró el registro, lanza una excepción 404
         if updated_rows == 0:
             raise HTTPException(status_code=404, detail="Record not found")
-        
-        # Retorna un mensaje de éxito
         return {"message": "Record updated successfully", "updated_rows": updated_rows}
-    
     except KeyError as e:
-        # Maneja errores de clave (por ejemplo, tabla no encontrada)
         raise HTTPException(status_code=404, detail=str(e))
-    
     except Exception as e:
-        # Maneja otros errores inesperados
         raise HTTPException(status_code=422, detail=str(e))
 
-
+# Actualizar parcialmente un registro (PATCH)
 @app.patch("/{table_name}/{record_id}")
-async def patch_record_endpoint(table_name: str, record_id: int, data: dict):
-    db = SessionLocal()  # Obtén la sesión de la base de datos
-    updated_rows = patch_record(db, table_name, record_id, data)
-    db.close()
-
-    if updated_rows == 0:
-        raise HTTPException(status_code=404, detail="Registro no encontrado")
-    
-    return {"message": "Registro actualizado parcialmente"}
+def patch_record_endpoint(
+    table_name: str,
+    record_id: int,
+    data: Dict,
+    db: Session = Depends(get_db)
+):
+    try:
+        updated_rows = patch_record(db, table_name, record_id, data)
+        if updated_rows == 0:
+            raise HTTPException(status_code=404, detail="Record not found")
+        return {"message": "Record updated partially", "updated_rows": updated_rows}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
