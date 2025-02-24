@@ -12,15 +12,24 @@ from crud.crudDinamico import (
 )
 
 app = FastAPI()
-
 class DynamicSchema(BaseModel):
     data: Dict  # Permite un diccionario dinámico de campos
 
 
+@app.get("/table_name")
+def read_all(db: Session = Depends(get_db)):
+    try:
+        records = get_all_records(db, "items")
+        return records
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"Table 'items' not found: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+
 @app.get("/{table_name}")
 def read_all(table_name: str, db: Session = Depends(get_db)):
     try:
-        records = get_all_records(db, table_name)
+        records = get_record_by_id(db, table_name)
         return records
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -83,3 +92,5 @@ def update(
     except Exception as e:
         # Maneja otros errores inesperados
         raise HTTPException(status_code=422, detail=str(e))
+
+ # Crear un patch para modificar solo un registro de la tabla que deseo modificar´
