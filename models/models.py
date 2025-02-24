@@ -13,7 +13,7 @@ DB_NAME = os.getenv("DB_NAME")
 
 # Construcción del string de conexión usando f-string
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_recycle=3600)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Metadata para reflejar las tablas existentes
