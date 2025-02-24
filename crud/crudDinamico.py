@@ -36,3 +36,13 @@ def delete_record(db: Session, table_name: str, record_id: int):
     db.commit()
     return result.rowcount
 
+def patch_record(db: Session, table_name: str, record_id: int, data: dict):
+    """
+    Actualiza parcialmente un registro en la tabla basado en su ID.
+    Solo se actualizan los campos proporcionados en el diccionario `data`.
+    """
+    table = get_table(table_name)
+    result = db.execute(table.update().where(table.c.id == record_id).values(**data))
+    db.commit()
+    return result.rowcount
+

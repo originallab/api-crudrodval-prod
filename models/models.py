@@ -1,7 +1,16 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+
 import os
 
+<<<<<<< HEAD
+=======
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
+
+# Obtener las variables de entorno
+>>>>>>> c476857ee07ead1c918824b552d078849c42b947
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")

@@ -83,3 +83,15 @@ def update(
     except Exception as e:
         # Maneja otros errores inesperados
         raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.patch("/{table_name}/{record_id}")
+async def patch_record_endpoint(table_name: str, record_id: int, data: dict):
+    db = SessionLocal()  # Obtén la sesión de la base de datos
+    updated_rows = patch_record(db, table_name, record_id, data)
+    db.close()
+
+    if updated_rows == 0:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    return {"message": "Registro actualizado parcialmente"}
