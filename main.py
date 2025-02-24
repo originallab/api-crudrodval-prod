@@ -17,13 +17,15 @@ class DynamicSchema(BaseModel):
     data: Dict  # Permite un diccionario dinámico de campos
 
 
-@app.get("/{table_name}")
+@app.get("/{table_name}/all")
 def read_all(table_name: str, db: Session = Depends(get_db)):
     try:
         records = get_all_records(db, table_name)
         return records
     except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
 
 @app.post("/{table_name}")
