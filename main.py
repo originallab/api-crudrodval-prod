@@ -17,8 +17,7 @@ app = FastAPI()
 class DynamicSchema(BaseModel):
     data: Dict  # Permite un diccionario dinámico de campos
 
-
-# Llamado a la api para obtener todos los datos de una tabla
+# Obtener todos los registros de una tabla
 @app.get("/{table_name}/all")
 def read_all(table_name: str, db: Session = Depends(get_db)):
     try:
@@ -31,8 +30,7 @@ def read_all(table_name: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
-
-# Llamado del metodo get para obtener los valores por medio de su id
+# Obtener un registro por su ID
 @app.get("/{table_name}/{record_id}")
 def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db)):
     try:
@@ -45,8 +43,7 @@ def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
-
-# LLamado del metodo post para crear un nuevo registro
+# Crear un nuevo registro
 @app.post("/{table_name}")
 def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
@@ -57,7 +54,7 @@ def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-# Llamado del metodo delete para eliminar algun registro de la tabla
+# Eliminar un registro
 @app.delete("/{table_name}/{record_id}")
 def delete(table_name: str, record_id: int, db: Session = Depends(get_db)):
     try:
@@ -70,8 +67,7 @@ def delete(table_name: str, record_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-
-# Llamado del metodo PUT para actualizar los campos de una tabla por medio de su id
+# Actualizar un registro (PUT)
 @app.put("/{table_name}/{record_id}")
 def update(
     table_name: str,
@@ -89,8 +85,7 @@ def update(
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-
-# Llamado del metodo PATCH para actualizar solo un campo de alguna tabla por medio de su id
+# Actualizar parcialmente un registro (PATCH)
 @app.patch("/{table_name}/{record_id}")
 def patch_record_endpoint(
     table_name: str,
