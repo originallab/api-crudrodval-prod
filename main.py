@@ -23,12 +23,12 @@ def read_all(table_name: str, db: Session = Depends(get_db)):
     try:
         records = get_values(db, table_name)
         if not records:
-            raise HTTPException(status_code=404, detail=f"No se encuentran valores en la tabla '{table_name}'")
-        return {"table": table_name, "records": [dict(row) for row in records]}  # Convertir a JSON
+            raise HTTPException(status_code=404, detail=f"No hay registros en la tabla '{table_name}'")
+        return {"table": table_name, "records": records}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Obtener un registro por su ID
 @app.get("/{table_name}/{record_id}")
@@ -37,11 +37,11 @@ def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get
         record = get_valuesid(db, table_name, record_id)
         if record is None:
             raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado en '{table_name}'")
-        return {"table": table_name, "record": dict(record)}
+        return {"table": table_name, "record": record}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Crear un nuevo registro
 @app.post("/{table_name}")
@@ -49,8 +49,6 @@ def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
         record_id = create_values(db, table_name, data.data)
         return {"id": record_id, **data.data}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -62,8 +60,6 @@ def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = D
         if updated_rows == 0:
             raise HTTPException(status_code=404, detail="Registro no encontrado o sin cambios")
         return {"message": "Registro actualizado satisfactoriamente"}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -71,20 +67,12 @@ def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = D
 @app.patch("/{table_name}/{record_id}")
 def patch_record_endpoint(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
-        existing_record = get_valuesid(db, table_name, record_id)
-        if existing_record is None:
-            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no existe en '{table_name}'")
-
         updated_rows = patch_values(db, table_name, record_id, data.data)
         if updated_rows == 0:
-            raise HTTPException(status_code=404, detail="No se realizaron cambios")
-
-        updated_record = get_valuesid(db, table_name, record_id)
-        return {"message": "Registro actualizado parcialmente", "Registro actualizado": dict(updated_record)}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+            raise HTTPException(status_code=404, detail="No se encontraron registros para actualizar")
+        return {"message": "Registro actualizado parcialmente"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Eliminar un registro
 @app.delete("/{table_name}/{record_id}")
@@ -94,7 +82,5 @@ def delete(table_name: str, record_id: int, db: Session = Depends(get_db)):
         if not deleted:
             raise HTTPException(status_code=404, detail="Registro no encontrado")
         return {"message": "Registro eliminado satisfactoriamente"}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))

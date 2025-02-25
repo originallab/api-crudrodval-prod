@@ -1,58 +1,84 @@
 from sqlalchemy import Table
 from sqlalchemy.orm import Session
-from models.models import metadata
+from sqlalchemy.exc import SQLAlchemyError
+from models.models import metadata, engine
 
-# Obtener la tabla dinámicamente
+# Método para obtener una tabla por su nombre
 def get_table(table_name: str) -> Table:
+    # Asegurar que las tablas están reflejadas correctamente
     if table_name not in metadata.tables:
-        raise KeyError(f"Table '{table_name}' not found in metadata.")
+        metadata.reflect(bind=engine)  # Reflejar solo si es necesario
+        if table_name not in metadata.tables:
+            raise KeyError(f"Table '{table_name}' not found in metadata.")
     return metadata.tables[table_name]
 
-# Obtener todos los registros de una tabla
+# Método para obtener todos los registros de una tabla
 def get_values(db: Session, table_name: str):
     table = get_table(table_name)
-    return db.execute(table.select()).fetchall()  # Se eliminó .scalars()
+    try:
+        result = db.execute(table.select()).fetchall()
+        return [dict(row._mapping) for row in result]  # Convertir a lista de diccionarios
+    except SQLAlchemyError as e:
+        raise Exception(f"Database error: {e}")
 
-# Obtener un registro por su ID
+# Método para obtener un registro por su ID
 def get_valuesid(db: Session, table_name: str, record_id: int):
     table = get_table(table_name)
-    return db.execute(table.select().where(table.c.id == record_id)).fetchone()
+    try:
+        result = db.execute(table.select().where(table.c.id == record_id)).first()
+        return dict(result._mapping) if result else None
+    except SQLAlchemyError as e:
+        raise Exception(f"Database error: {e}")
 
-# Crear un nuevo registro
+# Método para crear un nuevo registro
 def create_values(db: Session, table_name: str, data: dict):
     table = get_table(table_name)
-    result = db.execute(table.insert().values(**data))
-    db.commit()
-    return result.lastrowid
+    try:
+        result = db.execute(table.insert().values(**data))
+        db.commit()
+        return result.lastrowid
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise Exception(f"Database error: {e}")
 
-# Actualizar completamente un registro (PUT)
+# Método para actualizar completamente un registro (PUT)
 def update_values(db: Session, table_name: str, record_id: int, data: dict):
     table = get_table(table_name)
-
     existing_record = get_valuesid(db, table_name, record_id)
     if not existing_record:
-        return 0  # Indicar que no se actualizó ningún registro
+        return 0  # No se encontró el registro
+    try:
+        result = db.execute(table.update().where(table.c.id == record_id).values(**data))
+        db.commit()
+        return result.rowcount
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise Exception(f"Database error: {e}")
 
-    result = db.execute(table.update().where(table.c.id == record_id).values(**data))
-    db.commit()
-    return result.rowcount
-
-# Actualizar parcialmente un registro (PATCH)
+# Método para actualizar parcialmente un registro (PATCH)
 def patch_values(db: Session, table_name: str, record_id: int, data: dict):
     table = get_table(table_name)
-
-    result = db.execute(table.update().where(table.c.id == record_id).values(**data))
-    db.commit()
-    return result.rowcount
-
-# Eliminar un registro
-def delete_values(db: Session, table_name: str, record_id: int):
-    table = get_table(table_name)
-
     existing_record = get_valuesid(db, table_name, record_id)
     if not existing_record:
-        return 0  # Indicar que no se eliminó ningún registro
+        return 0  # No se encontró el registro
+    try:
+        result = db.execute(table.update().where(table.c.id == record_id).values(**data))
+        db.commit()
+        return result.rowcount
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise Exception(f"Database error: {e}")
 
-    result = db.execute(table.delete().where(table.c.id == record_id))
-    db.commit()
-    return result.rowcount
+# Método para eliminar un registro
+def delete_values(db: Session, table_name: str, record_id: int):
+    table = get_table(table_name)
+    existing_record = get_valuesid(db, table_name, record_id)
+    if not existing_record:
+        return 0  # No se encontró el registro
+    try:
+        result = db.execute(table.delete().where(table.c.id == record_id))
+        db.commit()
+        return result.rowcount
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise Exception(f"Database error: {e}")
