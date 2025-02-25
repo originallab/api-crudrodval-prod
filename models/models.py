@@ -16,6 +16,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
 metadata.reflect(bind=engine)
 
+
 # Función para obtener una sesión de la base de datos
 def get_db():
     db = SessionLocal()
