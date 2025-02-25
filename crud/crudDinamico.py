@@ -1,8 +1,7 @@
-from sqlalchemy import Table, select
+from sqlalchemy import Table
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
-from fastapi import HTTPException
-from models.models import metadata
+from sqlalchemy import MetaData
+from models.models import metadata, engine
 
 # Método para obtener una tabla por su nombre
 def get_table(table_name: str) -> Table:
@@ -12,52 +11,53 @@ def get_table(table_name: str) -> Table:
 
 # Método para obtener todos los registros de una tabla
 def get_values(db: Session, table_name: str):
-    try:
-        table = get_table(table_name)
-        records = db.execute(select(table)).fetchall()
-        if not records:
-            raise HTTPException(status_code=404, detail=f"No se encuentran valores en la tabla '{table_name}'")
-        return records
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found: {e}")
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    table = get_table(table_name)
+    return db.execute(table.select()).scalars().all()
 
 # Método para obtener un registro por su ID
 def get_valuesid(db: Session, table_name: str, record_id: int):
-    try:
-        table = get_table(table_name)
-        if 'id' not in table.columns:
-            raise HTTPException(status_code=400, detail=f"Table '{table_name}' does not have an 'id' column")
-        record = db.execute(select(table).where(table.c.id == record_id)).fetchone()
-        if record is None:
-            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no se encuentra en la tabla '{table_name}'")
-        return record
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found: {e}")
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    table = get_table(table_name)
+    return db.execute(table.select().where(table.c.id == record_id)).scalars().first()
 
-# Método para actualizar parcialmente un registro
+# Método para crear un nuevo registro
+def create_values(db: Session, table_name: str, data: dict):
+    table = get_table(table_name)
+    result = db.execute(table.insert().values(**data))
+    db.commit()
+    return result.lastrowid
+
+# Método para actualizar completamente un registro (PUT)
+def update_values(db: Session, table_name: str, record_id: int, data: dict):
+    table = get_table(table_name)
+    
+    existing_record = get_valuesid(db, table_name, record_id)
+    if not existing_record:
+        return 0  # Indicar que no se actualizó ningún registro
+
+    result = db.execute(table.update().where(table.c.id == record_id).values(**data))
+    db.commit()
+    return result.rowcount
+
+# Método para actualizar parcialmente un registro (PATCH)
 def patch_values(db: Session, table_name: str, record_id: int, data: dict):
-    try:
-        table = get_table(table_name)
-        if 'id' not in table.columns:
-            raise HTTPException(status_code=400, detail=f"Table '{table_name}' does not have an 'id' column")
-        
-        # Verificar si el registro existe
-        existing_record = db.execute(select(table).where(table.c.id == record_id)).fetchone()
-        if existing_record is None:
-            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no se encuentra en la tabla '{table_name}'")
+    table = get_table(table_name)
 
-        # Actualizar el registro
-        result = db.execute(table.update().where(table.c.id == record_id).values(**data))
-        db.commit()
-        if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail="No records were updated")
-        return result.rowcount
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found: {e}")
-    except SQLAlchemyError as e:
-        db.rollback()  # Revertir la transacción en caso de error
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    existing_record = get_valuesid(db, table_name, record_id)
+    if not existing_record:
+        return 0  # Indicar que no se actualizó ningún registro
+
+    result = db.execute(table.update().where(table.c.id == record_id).values(**data))
+    db.commit()
+    return result.rowcount
+
+# Método para eliminar un registro
+def delete_values(db: Session, table_name: str, record_id: int):
+    table = get_table(table_name)
+
+    existing_record = get_valuesid(db, table_name, record_id)
+    if not existing_record:
+        return 0  # Indicar que no se eliminó ningún registro
+
+    result = db.execute(table.delete().where(table.c.id == record_id))
+    db.commit()
+    return result.rowcount
