@@ -16,7 +16,19 @@ app = FastAPI()
 
 class DynamicSchema(BaseModel):
     data: Dict
-
+# Obtener un registro por su ID
+@app.get("/{table_name}/{record_id}")
+def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db)):
+    try:
+        record = get_valuesid(db, table_name, record_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado en '{table_name}'")
+        return {"table": table_name, "record": record}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 # Obtener todos los registros de una tabla
 @app.get("/{table_name}/all")
 def read_all(table_name: str, db: Session = Depends(get_db)):
@@ -30,18 +42,6 @@ def read_all(table_name: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Obtener un registro por su ID
-@app.get("/{table_name}/{record_id}")
-def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db)):
-    try:
-        record = get_valuesid(db, table_name, record_id)
-        if record is None:
-            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado en '{table_name}'")
-        return {"table": table_name, "record": record}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # Crear un nuevo registro
 @app.post("/{table_name}")
