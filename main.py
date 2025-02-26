@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict
 from models.models import get_db
+from fastapi.middleware.cors import CORSMiddleware  # FALTABA ESTA IMPORTACIÓN
 from crud.crudDinamico import (
     get_values,
     get_valuesid,
@@ -14,6 +15,14 @@ from crud.crudDinamico import (
 
 app = FastAPI()
 
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permitir todos los orígenes (cambia esto en producción)
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos los métodos (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Permitir todos los encabezados
+)
 class DynamicSchema(BaseModel):
     data: Dict
 
