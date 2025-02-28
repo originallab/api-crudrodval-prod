@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict
@@ -32,13 +32,17 @@ def health():
 
 # Obtener todos los registros de una tabla (GET)
 @app.get("/{table_name}/all")
-def read_all(table_name: str, db: Session = Depends(get_db)):
+def read_all(table_name: str, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
-        # Llamamos a la función que obtiene todos los registros
-        records = get_values(db, table_name)
-        if not records:
-            raise HTTPException(status_code=404, detail=f"No hay registros en la tabla '{table_name}'")
-        return {"table": table_name, "records": records}
+        apikeys = get_values(db, 'apikey')
+        exists = any(ak["apikey"] == apikey for ak in apikeys)
+        if exists:
+            # Llamamos a la función que obtiene todos los registros
+            records = get_values(db, table_name)
+            if not records:
+                raise HTTPException(status_code=404, detail=f"No hay registros en la tabla '{table_name}'")
+            return {"table": table_name, "records": records}
+        raise HTTPException(status_code=403, detail=str(e))
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
