@@ -53,7 +53,7 @@ def read_all(table_name: str, db: Session = Depends(get_db), apikey: str = Heade
 
 # Obtener un registro por su ID (GET)
 @app.get("/{table_name}/{record_id}")
-def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db)):
+def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
         apikey_validation(apikey)
         # Llamamos a la función que obtiene el registro por ID
@@ -68,7 +68,7 @@ def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get
 
 # Crear un nuevo registro
 @app.post("/{table_name}")
-def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
+def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
         apikey_validation(apikey)
         record_id = create_values(db, table_name, data.data)
@@ -78,7 +78,7 @@ def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
 
 # Actualizar completamente un registro (PUT)
 @app.put("/{table_name}/{record_id}")
-def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db)):
+def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
         apikey_validation(apikey)
         updated_rows = update_values(db, table_name, record_id, data.data)
@@ -90,7 +90,7 @@ def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = D
 
 # Actualizar parcialmente un registro (PATCH)
 @app.patch("/{table_name}/{record_id}")
-def patch_record_endpoint(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db)):
+def patch_record_endpoint(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
         apikey_validation(apikey)
         # Llamamos a la función que hace la actualización parcial
@@ -103,7 +103,7 @@ def patch_record_endpoint(table_name: str, record_id: int, data: DynamicSchema, 
 
 # Eliminar un registro
 @app.delete("/{table_name}/{record_id}")
-def delete(table_name: str, record_id: int, db: Session = Depends(get_db)):
+def delete(table_name: str, record_id: int, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
         apikey_validation(apikey)
         deleted = delete_values(db, table_name, record_id)
