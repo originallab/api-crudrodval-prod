@@ -42,7 +42,7 @@ def read_all(table_name: str, db: Session = Depends(get_db), apikey: str = Heade
             if not records:
                 raise HTTPException(status_code=404, detail=f"No hay registros en la tabla '{table_name}'")
             return {"table": table_name, "records": records}
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail='Apikey error')
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
