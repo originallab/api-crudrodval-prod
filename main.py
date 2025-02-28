@@ -26,6 +26,12 @@ app.add_middleware(
 class DynamicSchema(BaseModel):
     data: Dict
 
+def apikey_validation(apikey: str):
+        apikeys = get_values(db, 'apikey')
+        exists = any(ak["apikey"] == apikey for ak in apikeys)
+        if not exists:
+            raise HTTPException(status_code=403, detail='Apikey error')
+
 @app.get('/health')
 def health():
     return {'status': 'ok'}
@@ -34,15 +40,12 @@ def health():
 @app.get("/{table_name}/all")
 def read_all(table_name: str, db: Session = Depends(get_db), apikey: str = Header(None)):
     try:
-        apikeys = get_values(db, 'apikey')
-        exists = any(ak["apikey"] == apikey for ak in apikeys)
-        if exists:
-            # Llamamos a la función que obtiene todos los registros
-            records = get_values(db, table_name)
-            if not records:
-                raise HTTPException(status_code=404, detail=f"No hay registros en la tabla '{table_name}'")
-            return {"table": table_name, "records": records}
-        raise HTTPException(status_code=403, detail='Apikey error')
+        apikey_validation(apikey)
+        # Llamamos a la función que obtiene todos los registros
+        records = get_values(db, table_name)
+        if not records:
+            raise HTTPException(status_code=404, detail=f"No hay registros en la tabla '{table_name}'")
+        return {"table": table_name, "records": records}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -52,6 +55,7 @@ def read_all(table_name: str, db: Session = Depends(get_db), apikey: str = Heade
 @app.get("/{table_name}/{record_id}")
 def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get_db)):
     try:
+        apikey_validation(apikey)
         # Llamamos a la función que obtiene el registro por ID
         record = get_valuesid(db, table_name, record_id)
         if record is None:
@@ -66,6 +70,7 @@ def read_record_by_id(table_name: str, record_id: int, db: Session = Depends(get
 @app.post("/{table_name}")
 def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
+        apikey_validation(apikey)
         record_id = create_values(db, table_name, data.data)
         return {"id": record_id, **data.data}
     except Exception as e:
@@ -75,6 +80,7 @@ def create(table_name: str, data: DynamicSchema, db: Session = Depends(get_db)):
 @app.put("/{table_name}/{record_id}")
 def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
+        apikey_validation(apikey)
         updated_rows = update_values(db, table_name, record_id, data.data)
         if updated_rows == 0:
             raise HTTPException(status_code=404, detail="Registro no encontrado o sin cambios")
@@ -86,6 +92,7 @@ def update(table_name: str, record_id: int, data: DynamicSchema, db: Session = D
 @app.patch("/{table_name}/{record_id}")
 def patch_record_endpoint(table_name: str, record_id: int, data: DynamicSchema, db: Session = Depends(get_db)):
     try:
+        apikey_validation(apikey)
         # Llamamos a la función que hace la actualización parcial
         updated_rows = patch_values(db, table_name, record_id, data.data)
         if updated_rows == 0:
@@ -98,6 +105,7 @@ def patch_record_endpoint(table_name: str, record_id: int, data: DynamicSchema, 
 @app.delete("/{table_name}/{record_id}")
 def delete(table_name: str, record_id: int, db: Session = Depends(get_db)):
     try:
+        apikey_validation(apikey)
         deleted = delete_values(db, table_name, record_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Registro no encontrado")
