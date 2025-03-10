@@ -95,3 +95,13 @@ async def patch_record_endpoint(table_name: str, record_id: int, data: dict):
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     
     return {"message": "Registro actualizado parcialmente"}
+
+# Nuevo endpoint para probar la conexión a la base de datos
+@app.get("/test-db-connection")
+def test_db_connection(db: Session = Depends(get_db)):
+    try:
+        # Intenta realizar una consulta simple
+        db.execute("SELECT 1")
+        return {"message": "Database connection successful"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
