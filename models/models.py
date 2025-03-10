@@ -6,10 +6,10 @@ import os
 # Cargar variables de entorno desde el archivo .env
 
 # Obtener las variables de entorno
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER","mariadb")
+DB_PASSWORD = os.getenv("DB_PASSWORD","neurone123")
+DB_HOST = os.getenv("DB_HOST","localhost")
+DB_NAME = os.getenv("DB_NAME","inventarioneurone")
 
 # Construcción del string de conexión usando f-string
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
