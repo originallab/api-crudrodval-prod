@@ -7,45 +7,45 @@ from models.models import metadata, engine
 
 # Método para obtener una tabla por su nombre y su clave primaria
 def get_table(table_name: str):
-    try:
+    # Asegurar que la tabla existe o reflejarla
+    if table_name not in metadata.tables:
+        metadata.reflect(bind=engine)
         if table_name not in metadata.tables:
-            print(f"Tabla '{table_name}' no encontrada, intentando reflejar...")
-            metadata.reflect(bind=engine)
-            if table_name not in metadata.tables:
-                raise KeyError(f"Table '{table_name}' not found in metadata.")
-            print(f"Tabla '{table_name}' reflejada correctamente")
-        
-        table = metadata.tables[table_name]
-        print(f"Columnas en {table_name}: {list(table.columns.keys())}")
-        
-        # Verificar id_[table_name]
-        possible_id = f"id_{table_name}"
-        if possible_id in table.columns:
-            print(f"Usando columna específica: {possible_id}")
-            return table, possible_id
-        
-        # Verificar cualquier columna con prefijo id_
-        id_columns = [col for col in table.columns.keys() if col.startswith('id_')]
-        if id_columns:
-            print(f"Usando primera columna con prefijo id_: {id_columns[0]}")
-            return table, id_columns[0]
-        
-        # Usar detección estándar de clave primaria
-        primary_key_columns = inspect(table).primary_key.columns.keys()
-        print(f"Columnas de clave primaria detectadas: {primary_key_columns}")
-        
-        if not primary_key_columns:
-            raise KeyError(f"La tabla '{table_name}' no tiene una clave primaria definida.")
-        
-        primary_key_column = primary_key_columns[0]
-        print(f"Usando clave primaria estándar: {primary_key_column}")
-        return table, primary_key_column
-    except Exception as e:
-        import traceback
-        print(f"Error en get_table: {e}")
-        print(traceback.format_exc())
-        raise
+            raise KeyError(f"Tabla '{table_name}' no encontrada en metadata.")
     
+    table = metadata.tables[table_name]
+    column_names = list(table.columns.keys())
+    
+    # Paso 1: Buscar columna exacta id_{table_name}
+    possible_id = f"id_{table_name}"
+    if possible_id in column_names:
+        return table, possible_id
+    
+    # Paso 2: Buscar ignorando mayúsculas/minúsculas
+    for col in column_names:
+        if col.lower() == possible_id.lower():
+            return table, col
+    
+    # Paso 3: Buscar cualquier columna que comience con id_ o ID_
+    for prefix in ['id_', 'ID_']:
+        id_columns = [col for col in column_names if col.startswith(prefix)]
+        if id_columns:
+            return table, id_columns[0]
+    
+    # Paso 4: Usar las claves primarias si existen
+    primary_key_columns = inspect(table).primary_key.columns.keys()
+    if primary_key_columns:
+        return table, primary_key_columns[0]
+    
+    # Paso 5: Buscar una columna llamada simplemente 'id' o 'ID'
+    for id_name in ['id', 'ID']:
+        if id_name in column_names:
+            return table, id_name
+    
+    # Si llegamos aquí, no se encontró una columna adecuada
+    raise KeyError(f"No se pudo encontrar la clave primaria para la tabla '{table_name}'.")
+
+
 # Método para verificar si una columna existe en la tabla
 def validate_column(table: Table, column_name: str):
     if column_name not in table.columns:
@@ -78,27 +78,25 @@ def get_values_by_field(db: Session, table_name: str, field_name: str, field_val
 
 # Método para obtener un registro por su ID (usando la clave primaria dinámica)
 def get_valuesid(db: Session, table_name: str, record_id: int):
+    table, primary_key_column = get_table(table_name)
+    
     try:
-        table, primary_key_column = get_table(table_name)
-        print(f"Tabla: {table_name}, Clave primaria detectada: {primary_key_column}")
+        # Crear una consulta explícita para mayor claridad
+        column = getattr(table.c, primary_key_column)
+        query = table.select().where(column == record_id)
         
-        query = table.select().where(getattr(table.c, primary_key_column) == record_id)
-        print(f"Consulta SQL: {query}")
-        
+        # Ejecutar la consulta directamente (sin usar ORM)
         result = db.execute(query).first()
-        if result:
-            return dict(result._mapping)
-        else:
-            print(f"No se encontró registro con {primary_key_column}={record_id}")
+        
+        if result is None:
             return None
+            
+        # Convertir el resultado a un diccionario
+        return dict(result._mapping)
     except SQLAlchemyError as e:
-        print(f"Error de SQLAlchemy: {e}")
-        raise Exception(f"Database error: {e}")
-    except Exception as e:
-        import traceback
-        print(f"Error inesperado: {e}")
-        print(traceback.format_exc())
-        raise Exception(f"Error inesperado: {e}")
+        db.rollback()
+        raise Exception(f"Error de base de datos: {str(e)}")
+    
 
 # Método para crear un nuevo registro
 def create_values(db: Session, table_name: str, data: dict):
