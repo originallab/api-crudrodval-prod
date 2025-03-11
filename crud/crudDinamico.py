@@ -13,12 +13,21 @@ def get_table(table_name: str):
             raise KeyError(f"Table '{table_name}' not found in metadata.")
     table = metadata.tables[table_name]
     
-    # Obtener el nombre de la clave primaria
+    # First check if there's a column named 'id_[table_name]'
+    possible_id = f"id_{table_name}"
+    if possible_id in table.columns:
+        return table, possible_id
+    
+    # Check for any column with id_ prefix
+    for column_name in table.columns.keys():
+        if column_name.startswith('id_'):
+            return table, column_name
+    
+    # Use the standard primary key detection as fallback
     primary_key_columns = inspect(table).primary_key.columns.keys()
     if not primary_key_columns:
         raise KeyError(f"La tabla '{table_name}' no tiene una clave primaria definida.")
     
-    # Usar la primera columna de la clave primaria
     primary_key_column = primary_key_columns[0]
     return table, primary_key_column
 
