@@ -57,8 +57,8 @@ def read_all(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Obtener un registro por un campo personalizado
-@app.get("/{table_name}/{field_name}/{field_value}")
+# Obtener un registro por un campo personalizado (no clave primaria)
+@app.get("/{table_name}/field/{field_name}/{field_value}")
 def read_record_by_field(
     table_name: str,
     field_name: str,
@@ -70,7 +70,30 @@ def read_record_by_field(
         apikey_validation(db, apikey)
         record = get_values_by_field(db, table_name, field_name, field_value)
         if record is None:
-            raise HTTPException(status_code=404, detail=f"Registro con {field_name} {field_value} no encontrado en '{table_name}'")
+            raise HTTPException(status_code=404, detail=f"Registro con {field_name}={field_value} no encontrado en '{table_name}'")
+        return {"table": table_name, "record": record}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Obtener un registro por su clave primaria dinámica
+@app.get("/{table_name}/{primary_key_column}/{record_id}")
+def read_record_by_dynamic_id(
+    table_name: str,
+    primary_key_column: str,
+    record_id: int,
+    db: Session = Depends(get_db),
+    apikey: str = Header(None)
+):
+    try:
+        apikey_validation(db, apikey)
+        record = get_valuesid(db, table_name, record_id, primary_key_column)
+        if record is None:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Registro con {primary_key_column}={record_id} no encontrado en '{table_name}'"
+            )
         return {"table": table_name, "record": record}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -92,13 +115,13 @@ def create(
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-# Actualizar completamente un registro (PUT)
-@app.put("/{table_name}/{record_id}")
-def update(
+# Actualizar completamente un registro con clave primaria dinámica
+@app.put("/{table_name}/{primary_key_column}/{record_id}")
+def update_with_dynamic_id(
     table_name: str,
+    primary_key_column: str,
     record_id: int,
     data: DynamicSchema,
-    primary_key_column: str = Query(default="id", description="Nombre de la columna de clave primaria"),
     db: Session = Depends(get_db),
     apikey: str = Header(None)
 ):
@@ -106,18 +129,21 @@ def update(
         apikey_validation(db, apikey)
         updated_rows = update_values(db, table_name, record_id, data.data, primary_key_column)
         if updated_rows == 0:
-            raise HTTPException(status_code=404, detail="Registro no encontrado o sin cambios")
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Registro con {primary_key_column}={record_id} no encontrado o sin cambios"
+            )
         return {"message": "Registro actualizado satisfactoriamente"}
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-# Actualizar parcialmente un registro (PATCH)
-@app.patch("/{table_name}/{record_id}")
-def patch_record_endpoint(
+# Actualizar parcialmente un registro con clave primaria dinámica
+@app.patch("/{table_name}/{primary_key_column}/{record_id}")
+def patch_with_dynamic_id(
     table_name: str,
+    primary_key_column: str,
     record_id: int,
     data: DynamicSchema,
-    primary_key_column: str = Query(default="id", description="Nombre de la columna de clave primaria"),
     db: Session = Depends(get_db),
     apikey: str = Header(None)
 ):
@@ -125,17 +151,20 @@ def patch_record_endpoint(
         apikey_validation(db, apikey)
         updated_rows = patch_values(db, table_name, record_id, data.data, primary_key_column)
         if updated_rows == 0:
-            raise HTTPException(status_code=404, detail="No se encontraron registros para actualizar")
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Registro con {primary_key_column}={record_id} no encontrado"
+            )
         return {"message": "Registro actualizado parcialmente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Eliminar un registro
-@app.delete("/{table_name}/{record_id}")
-def delete(
+# Eliminar un registro con clave primaria dinámica
+@app.delete("/{table_name}/{primary_key_column}/{record_id}")
+def delete_with_dynamic_id(
     table_name: str,
+    primary_key_column: str,
     record_id: int,
-    primary_key_column: str = Query(default="id", description="Nombre de la columna de clave primaria"),
     db: Session = Depends(get_db),
     apikey: str = Header(None)
 ):
@@ -143,7 +172,10 @@ def delete(
         apikey_validation(db, apikey)
         deleted = delete_values(db, table_name, record_id, primary_key_column)
         if not deleted:
-            raise HTTPException(status_code=404, detail="Registro no encontrado")
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Registro con {primary_key_column}={record_id} no encontrado"
+            )
         return {"message": "Registro eliminado satisfactoriamente"}
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
