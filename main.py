@@ -77,4 +77,73 @@ def read_record_by_field(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Resto de los endpoints (POST, PUT, PATCH, DELETE) permanecen igual
+# Crear un nuevo registro
+@app.post("/{table_name}")
+def create(
+    table_name: str,
+    data: DynamicSchema,
+    db: Session = Depends(get_db),
+    apikey: str = Header(None)
+):
+    try:
+        apikey_validation(db, apikey)
+        record_id = create_values(db, table_name, data.data)
+        return {"id": record_id, **data.data}
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+# Actualizar completamente un registro (PUT)
+@app.put("/{table_name}/{record_id}")
+def update(
+    table_name: str,
+    record_id: int,
+    data: DynamicSchema,
+    primary_key_column: str = Query(default="id", description="Nombre de la columna de clave primaria"),
+    db: Session = Depends(get_db),
+    apikey: str = Header(None)
+):
+    try:
+        apikey_validation(db, apikey)
+        updated_rows = update_values(db, table_name, record_id, data.data, primary_key_column)
+        if updated_rows == 0:
+            raise HTTPException(status_code=404, detail="Registro no encontrado o sin cambios")
+        return {"message": "Registro actualizado satisfactoriamente"}
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+# Actualizar parcialmente un registro (PATCH)
+@app.patch("/{table_name}/{record_id}")
+def patch_record_endpoint(
+    table_name: str,
+    record_id: int,
+    data: DynamicSchema,
+    primary_key_column: str = Query(default="id", description="Nombre de la columna de clave primaria"),
+    db: Session = Depends(get_db),
+    apikey: str = Header(None)
+):
+    try:
+        apikey_validation(db, apikey)
+        updated_rows = patch_values(db, table_name, record_id, data.data, primary_key_column)
+        if updated_rows == 0:
+            raise HTTPException(status_code=404, detail="No se encontraron registros para actualizar")
+        return {"message": "Registro actualizado parcialmente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Eliminar un registro
+@app.delete("/{table_name}/{record_id}")
+def delete(
+    table_name: str,
+    record_id: int,
+    primary_key_column: str = Query(default="id", description="Nombre de la columna de clave primaria"),
+    db: Session = Depends(get_db),
+    apikey: str = Header(None)
+):
+    try:
+        apikey_validation(db, apikey)
+        deleted = delete_values(db, table_name, record_id, primary_key_column)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Registro no encontrado")
+        return {"message": "Registro eliminado satisfactoriamente"}
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
