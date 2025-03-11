@@ -95,7 +95,7 @@ def read_record_by_id(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 # Crear un nuevo registro
 @app.post("/{table_name}")
 def create(

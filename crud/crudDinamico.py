@@ -12,8 +12,14 @@ def get_table(table_name: str):
         if table_name not in metadata.tables:
             raise KeyError(f"Table '{table_name}' not found in metadata.")
     table = metadata.tables[table_name]
+    
     # Obtener el nombre de la clave primaria
-    primary_key_column = inspect(table).primary_key.columns.keys()[0]
+    primary_key_columns = inspect(table).primary_key.columns.keys()
+    if not primary_key_columns:
+        raise KeyError(f"La tabla '{table_name}' no tiene una clave primaria definida.")
+    
+    # Usar la primera columna de la clave primaria
+    primary_key_column = primary_key_columns[0]
     return table, primary_key_column
 
 # Método para verificar si una columna existe en la tabla
@@ -58,15 +64,15 @@ def get_valuesid(db: Session, table_name: str, record_id: int):
 
 # Método para crear un nuevo registro
 def create_values(db: Session, table_name: str, data: dict):
-    table, _ = get_table(table_name)  # Obtener la tabla (no necesitamos la clave primaria aquí)
+    table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
     try:
         result = db.execute(table.insert().values(**data))
         db.commit()
-        return result.lastrowid
+        return result.lastrowid  # Devuelve el ID generado automáticamente
     except SQLAlchemyError as e:
         db.rollback()
         raise Exception(f"Database error: {e}")
-
+    
 # Método para actualizar completamente un registro (PUT)
 def update_values(db: Session, table_name: str, record_id: int, data: dict):
     table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
