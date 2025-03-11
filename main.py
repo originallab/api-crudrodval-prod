@@ -78,6 +78,7 @@ def read_record_by_field(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Obtener un registro por su clave primaria dinámica
+# En el archivo de la API (FastAPI)
 @app.get("/{table_name}/{record_id}")
 def read_record_by_id(
     table_name: str,
@@ -87,14 +88,20 @@ def read_record_by_id(
 ):
     try:
         apikey_validation(db, apikey)
+        print(f"Obteniendo registro de tabla '{table_name}' con ID {record_id}")
         record = get_valuesid(db, table_name, record_id)
         if record is None:
             raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado en '{table_name}'")
         return {"table": table_name, "record": record}
     except KeyError as e:
+        print(f"Error KeyError: {str(e)}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error interno: {str(e)}")
+        print(f"Traza completa:\n{error_trace}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
     
 # Crear un nuevo registro
 @app.post("/{table_name}")
