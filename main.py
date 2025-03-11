@@ -78,22 +78,18 @@ def read_record_by_field(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Obtener un registro por su clave primaria dinámica
-@app.get("/{table_name}/{primary_key_column}/{record_id}")
-def read_record_by_dynamic_id(
+@app.get("/{table_name}/{record_id}")
+def read_record_by_id(
     table_name: str,
-    primary_key_column: str,
     record_id: int,
     db: Session = Depends(get_db),
     apikey: str = Header(None)
 ):
     try:
         apikey_validation(db, apikey)
-        record = get_valuesid(db, table_name, record_id, primary_key_column)
+        record = get_valuesid(db, table_name, record_id)
         if record is None:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Registro con {primary_key_column}={record_id} no encontrado en '{table_name}'"
-            )
+            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado en '{table_name}'")
         return {"table": table_name, "record": record}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -115,11 +111,10 @@ def create(
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-# Actualizar completamente un registro con clave primaria dinámica
-@app.put("/{table_name}/{primary_key_column}/{record_id}")
-def update_with_dynamic_id(
+# Actualizar completamente un registro
+@app.put("/{table_name}/{record_id}")
+def update(
     table_name: str,
-    primary_key_column: str,
     record_id: int,
     data: DynamicSchema,
     db: Session = Depends(get_db),
@@ -127,21 +122,17 @@ def update_with_dynamic_id(
 ):
     try:
         apikey_validation(db, apikey)
-        updated_rows = update_values(db, table_name, record_id, data.data, primary_key_column)
+        updated_rows = update_values(db, table_name, record_id, data.data)
         if updated_rows == 0:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Registro con {primary_key_column}={record_id} no encontrado o sin cambios"
-            )
+            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado o sin cambios")
         return {"message": "Registro actualizado satisfactoriamente"}
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-# Actualizar parcialmente un registro con clave primaria dinámica
-@app.patch("/{table_name}/{primary_key_column}/{record_id}")
-def patch_with_dynamic_id(
+# Actualizar parcialmente un registro
+@app.patch("/{table_name}/{record_id}")
+def patch(
     table_name: str,
-    primary_key_column: str,
     record_id: int,
     data: DynamicSchema,
     db: Session = Depends(get_db),
@@ -149,33 +140,26 @@ def patch_with_dynamic_id(
 ):
     try:
         apikey_validation(db, apikey)
-        updated_rows = patch_values(db, table_name, record_id, data.data, primary_key_column)
+        updated_rows = patch_values(db, table_name, record_id, data.data)
         if updated_rows == 0:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Registro con {primary_key_column}={record_id} no encontrado"
-            )
+            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado")
         return {"message": "Registro actualizado parcialmente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Eliminar un registro con clave primaria dinámica
-@app.delete("/{table_name}/{primary_key_column}/{record_id}")
-def delete_with_dynamic_id(
+# Eliminar un registro
+@app.delete("/{table_name}/{record_id}")
+def delete(
     table_name: str,
-    primary_key_column: str,
     record_id: int,
     db: Session = Depends(get_db),
     apikey: str = Header(None)
 ):
     try:
         apikey_validation(db, apikey)
-        deleted = delete_values(db, table_name, record_id, primary_key_column)
+        deleted = delete_values(db, table_name, record_id)
         if not deleted:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Registro con {primary_key_column}={record_id} no encontrado"
-            )
+            raise HTTPException(status_code=404, detail=f"Registro con ID {record_id} no encontrado")
         return {"message": "Registro eliminado satisfactoriamente"}
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))

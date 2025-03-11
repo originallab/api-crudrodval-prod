@@ -2,15 +2,19 @@ from typing import Optional, Dict
 from sqlalchemy import Table, and_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import inspect
 from models.models import metadata, engine
 
-# Método para obtener una tabla por su nombre
-def get_table(table_name: str) -> Table:
+# Método para obtener una tabla por su nombre y su clave primaria
+def get_table(table_name: str):
     if table_name not in metadata.tables:
         metadata.reflect(bind=engine)  # Reflejar solo si es necesario
         if table_name not in metadata.tables:
             raise KeyError(f"Table '{table_name}' not found in metadata.")
-    return metadata.tables[table_name]
+    table = metadata.tables[table_name]
+    # Obtener el nombre de la clave primaria
+    primary_key_column = inspect(table).primary_key.columns.keys()[0]
+    return table, primary_key_column
 
 # Método para verificar si una columna existe en la tabla
 def validate_column(table: Table, column_name: str):
@@ -19,7 +23,7 @@ def validate_column(table: Table, column_name: str):
 
 # Método para obtener todos los registros de una tabla con filtros opcionales
 def get_values(db: Session, table_name: str, filters: Optional[Dict[str, str]] = None):
-    table = get_table(table_name)
+    table, _ = get_table(table_name)  # Obtener la tabla (no necesitamos la clave primaria aquí)
     try:
         query = table.select()
         if filters:
@@ -33,7 +37,7 @@ def get_values(db: Session, table_name: str, filters: Optional[Dict[str, str]] =
 
 # Método para obtener un registro por un campo personalizado
 def get_values_by_field(db: Session, table_name: str, field_name: str, field_value: str):
-    table = get_table(table_name)
+    table, _ = get_table(table_name)  # Obtener la tabla (no necesitamos la clave primaria aquí)
     validate_column(table, field_name)  # Validar que la columna exista
     try:
         query = table.select().where(getattr(table.c, field_name) == field_value)
@@ -42,10 +46,9 @@ def get_values_by_field(db: Session, table_name: str, field_name: str, field_val
     except SQLAlchemyError as e:
         raise Exception(f"Database error: {e}")
 
-# Método para obtener un registro por su ID (usando el campo "id" por defecto)
-def get_valuesid(db: Session, table_name: str, record_id: int, primary_key_column: str = "id"):
-    table = get_table(table_name)
-    validate_column(table, primary_key_column)  # Validar que la columna exista
+# Método para obtener un registro por su ID (usando la clave primaria dinámica)
+def get_valuesid(db: Session, table_name: str, record_id: int):
+    table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
     try:
         query = table.select().where(getattr(table.c, primary_key_column) == record_id)
         result = db.execute(query).first()
@@ -55,7 +58,7 @@ def get_valuesid(db: Session, table_name: str, record_id: int, primary_key_colum
 
 # Método para crear un nuevo registro
 def create_values(db: Session, table_name: str, data: dict):
-    table = get_table(table_name)
+    table, _ = get_table(table_name)  # Obtener la tabla (no necesitamos la clave primaria aquí)
     try:
         result = db.execute(table.insert().values(**data))
         db.commit()
@@ -65,12 +68,8 @@ def create_values(db: Session, table_name: str, data: dict):
         raise Exception(f"Database error: {e}")
 
 # Método para actualizar completamente un registro (PUT)
-def update_values(db: Session, table_name: str, record_id: int, data: dict, primary_key_column: str = "id"):
-    table = get_table(table_name)
-    validate_column(table, primary_key_column)  # Validar que la columna exista
-    existing_record = get_valuesid(db, table_name, record_id, primary_key_column)
-    if not existing_record:
-        return 0  # No se encontró el registro
+def update_values(db: Session, table_name: str, record_id: int, data: dict):
+    table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
     try:
         result = db.execute(
             table.update()
@@ -84,12 +83,8 @@ def update_values(db: Session, table_name: str, record_id: int, data: dict, prim
         raise Exception(f"Database error: {e}")
 
 # Método para actualizar parcialmente un registro (PATCH)
-def patch_values(db: Session, table_name: str, record_id: int, data: dict, primary_key_column: str = "id"):
-    table = get_table(table_name)
-    validate_column(table, primary_key_column)  # Validar que la columna exista
-    existing_record = get_valuesid(db, table_name, record_id, primary_key_column)
-    if not existing_record:
-        return 0  # No se encontró el registro
+def patch_values(db: Session, table_name: str, record_id: int, data: dict):
+    table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
     try:
         result = db.execute(
             table.update()
@@ -103,12 +98,8 @@ def patch_values(db: Session, table_name: str, record_id: int, data: dict, prima
         raise Exception(f"Database error: {e}")
 
 # Método para eliminar un registro
-def delete_values(db: Session, table_name: str, record_id: int, primary_key_column: str = "id"):
-    table = get_table(table_name)
-    validate_column(table, primary_key_column)  # Validar que la columna exista
-    existing_record = get_valuesid(db, table_name, record_id, primary_key_column)
-    if not existing_record:
-        return 0  # No se encontró el registro
+def delete_values(db: Session, table_name: str, record_id: int):
+    table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
     try:
         result = db.execute(
             table.delete()
