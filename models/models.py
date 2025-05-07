@@ -5,8 +5,8 @@ import os
 # Cargar variables de entorno desde el archivo .env
 
 # Obtener las variables de entorno
-DB_USER = os.getenv("DB_USER","mariadb")
-DB_PASSWORD = os.getenv("DB_PASSWORD","bots123")
+DB_USER = os.getenv("DB_USER","botsito")
+DB_PASSWORD = os.getenv("DB_PASSWORD","botsito123")
 DB_HOST = os.getenv("DB_HOST","localhost")
 DB_NAME = os.getenv("DB_NAME","clientesbots")
 
