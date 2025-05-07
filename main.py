@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import logging
 import traceback
 from models.models import get_db
+from sqlalchemy import text  # Añade esta importación al principio
 from fastapi.middleware.cors import CORSMiddleware
 from crud.crudDinamico import (
     get_values,
