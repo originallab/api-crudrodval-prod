@@ -6,7 +6,6 @@ from pydantic import BaseModel
 import logging
 import traceback
 from models.models import get_db
-from sqlalchemy import text  # Añade esta importación al principio
 from fastapi.middleware.cors import CORSMiddleware
 from crud.crudDinamico import (
     get_values,
@@ -71,7 +70,7 @@ async def startup_event():
     try:
         # Intentar obtener una conexión a la base de datos
         db = next(get_db())
-        db.execute(text("SELECT 1"))
+        db.execute("SELECT 1")
         logger.info("Conexión a la base de datos establecida correctamente")
         db.close()
     except Exception as e:
@@ -102,7 +101,7 @@ def health():
 @app.get('/test-db')
 def test_db(db: Session = Depends(get_db)):
     try:
-        result = db.execute(text("SELECT 1")).fetchone()
+        result = db.execute("SELECT 1").fetchone()
         return {"database": "connected", "result": result[0]}
     except Exception as e:
         logger.error(f"Error al probar la conexión a la base de datos: {e}")
