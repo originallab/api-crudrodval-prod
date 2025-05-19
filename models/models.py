@@ -2,10 +2,10 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
 import os
 
-DB_USER = os.getenv("DB_USER", "user_automatizacion")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "automatizaciones")
+DB_USER = os.getenv("DB_USER", "adminUser")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "adminUser")
 DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("DB_NAME", "automatizacionestol")
+DB_NAME = os.getenv("DB_NAME", "usuarios")
 
 # Construcción del string de conexión usando f-string
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
