@@ -23,7 +23,7 @@ app = FastAPI()
 # configuracion de CORS, ya que era un conflicto que se tenia de CORS, permitiendo en direccionamiento de metodos, encabezados, origenes o credenciales.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["http://localhost:3000"],  
     allow_credentials=True,
     allow_methods=["*"],  
     allow_headers=["*"],  
