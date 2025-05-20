@@ -1,3 +1,5 @@
+# File para definir las operaciones CRUD dinámicas
+# Este file contiene las funciones CRUD para interactuar con la base de datos de manera dinámica.
 from typing import Optional, Dict
 from sqlalchemy import Table, and_
 from sqlalchemy.orm import Session
@@ -6,7 +8,7 @@ from sqlalchemy import inspect
 from models.models import metadata, engine
 from fastapi import HTTPException
 
-
+# Creacion del metodo para obtener la tabla y su PK
 def get_table(table_name: str):
     if table_name not in metadata.tables:
         metadata.reflect(bind=engine, only=[table_name])
@@ -18,12 +20,12 @@ def get_table(table_name: str):
     
     table = metadata.tables[table_name]
     
-    # metodo para las pks
+    # metodo para obtener la PK
     inspector = inspect(engine)
     try:
         pk_info = inspector.get_pk_constraint(table_name)
         if pk_info["constrained_columns"]:
-            return table, pk_info["constrained_columns"][0]  # Primera PK encontrada
+            return table, pk_info["constrained_columns"][0] 
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -32,7 +34,7 @@ def get_table(table_name: str):
   
     column_names = list(table.columns.keys())
     
-  
+    # Definir convenciones de nombres para la PK, para posibles nombres de las pks
     naming_conventions = [
         f"id_{table_name}",       
         "id",                     
@@ -49,7 +51,7 @@ def get_table(table_name: str):
         detail=f"No se pudo determinar la clave primaria para la tabla '{table_name}'."
     )
 
-
+# Creacion de un metodo para validar las columnas en las tablas
 def validate_column(table: Table, column_name: str):
     if column_name not in table.columns:
         raise HTTPException(
@@ -57,8 +59,8 @@ def validate_column(table: Table, column_name: str):
             detail=f"Columna '{column_name}' no existe en la tabla '{table.name}'."
         )
 
-
-def get_values(db: Session, table_name: str, filters: Optional[Dict[str, str]] = None):
+# Creación del metodo para obtener todos los valores de una tabla
+def obtener_registros(db: Session, table_name: str, filters: Optional[Dict[str, str]] = None):
     table, _ = get_table(table_name)
     try:
         query = table.select()
@@ -73,7 +75,8 @@ def get_values(db: Session, table_name: str, filters: Optional[Dict[str, str]] =
             detail=f"Error de base de datos: {str(e)}"
         )
 
-def get_values_by_field(db: Session, table_name: str, field_name: str, field_value: str):
+# Creacion de un metodo para obtener los valores de una tabla filtrando por un campo en especifico
+def obtener_registros_por_campo(db: Session, table_name: str, field_name: str, field_value: str):
     table, _ = get_table(table_name)
     validate_column(table, field_name)
     try:
@@ -86,7 +89,8 @@ def get_values_by_field(db: Session, table_name: str, field_name: str, field_val
             detail=f"Error de base de datos: {str(e)}"
         )
 
-def get_valuesid(db: Session, table_name: str, record_id: int):
+# Creacion de metodo para obtener los valores de una tabla filtrando por un id en especifico
+def obtener_registros_id(db: Session, table_name: str, record_id: int):
     table, pk_column = get_table(table_name)
     try:
         query = table.select().where(getattr(table.c, pk_column) == record_id)
@@ -103,11 +107,11 @@ def get_valuesid(db: Session, table_name: str, record_id: int):
             detail=f"Error de base de datos: {str(e)}"
         )
 
-
-def create_values(db: Session, table_name: str, data: dict):
+# Creacion de un metodo para crear valores en una tabla
+def crear_registros(db: Session, table_name: str, data: dict):
     table, pk_column = get_table(table_name)
     try:
-        # Eliminar PK si es autoincremental
+        # Eliminar la pk en caso de ser autoincremental
         if pk_column in data and inspect(table.columns[pk_column]).autoincrement:
             data.pop(pk_column)
         
@@ -121,7 +125,8 @@ def create_values(db: Session, table_name: str, data: dict):
             detail=f"Error al crear registro: {str(e)}"
         )
 
-def update_values(db: Session, table_name: str, record_id: int, data: dict):
+# Creación de un metodo para actualizar valores en una tabla
+def actualizar_registros(db: Session, table_name: str, record_id: int, data: dict):
     table, pk_column = get_table(table_name)
     try:
         result = db.execute(
@@ -143,11 +148,12 @@ def update_values(db: Session, table_name: str, record_id: int, data: dict):
             detail=f"Error al actualizar: {str(e)}"
         )
 
+#Creacion de un metodo para actualizar valores en una tabla por el metodo PATCH
+def modificar_registros(db: Session, table_name: str, record_id: int, data: dict):
+    return actualizar_registros(db, table_name, record_id, data)  # Reutiliza la misma lógica
 
-def patch_values(db: Session, table_name: str, record_id: int, data: dict):
-    return update_values(db, table_name, record_id, data)  # Reutiliza la misma lógica
-
-def delete_values(db: Session, table_name: str, record_id: int):
+# Creacion de un metodo para eliminar valores de una tabla
+def eliminar_registros(db: Session, table_name: str, record_id: int):
     table, pk_column = get_table(table_name)
     try:
         result = db.execute(
