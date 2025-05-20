@@ -9,6 +9,7 @@ from models.models import metadata, engine
 def get_table(table_name: str):
     # Asegurar que la tabla existe o reflejarla
     if table_name not in metadata.tables:
+        metadata.clear()
         metadata.reflect(bind=engine)
         if table_name not in metadata.tables:
             raise KeyError(f"Tabla '{table_name}' no encontrada en metadata.")
