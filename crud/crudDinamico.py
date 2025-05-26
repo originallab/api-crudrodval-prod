@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import inspect
 from models.models import metadata, engine
+from datetime import datetime  # Importar datetime para manejar fechas
 
 # Método para obtener una tabla por su nombre y su clave primaria
 def get_table(table_name: str):
@@ -45,7 +46,6 @@ def get_table(table_name: str):
     
     # Si llegamos aquí, no se encontró una columna adecuada
     raise KeyError(f"No se pudo encontrar la clave primaria para la tabla '{table_name}'.")
-
 
 # Método para verificar si una columna existe en la tabla
 def validate_column(table: Table, column_name: str):
@@ -114,6 +114,10 @@ def create_values(db: Session, table_name: str, data: dict):
 def update_values(db: Session, table_name: str, record_id: int, data: dict):
     table, primary_key_column = get_table(table_name)  # Obtener la tabla y la clave primaria
     try:
+        # Asegúrate de que la fecha de última modificación se incluya en los datos
+        if 'ultima_modificacion' not in data:
+            data['ultima_modificacion'] = datetime.utcnow()  # Establecer la fecha actual si no se proporciona
+
         result = db.execute(
             table.update()
             .where(getattr(table.c, primary_key_column) == record_id)
