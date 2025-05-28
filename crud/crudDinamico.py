@@ -8,13 +8,15 @@ from datetime import datetime  # Importar datetime para manejar fechas
 
 # Método para obtener una tabla por su nombre y su clave primaria
 def get_table(table_name: str):
-    # Asegurar que la tabla existe o reflejarla
+    # Siempre limpiar y reflejar metadata
+    metadata.clear()
+    metadata.reflect(bind=engine)
+
     if table_name not in metadata.tables:
-        metadata.clear()
-        metadata.reflect(bind=engine)
-        if table_name not in metadata.tables:
-            raise KeyError(f"Tabla '{table_name}' no encontrada en metadata.")
+        raise KeyError(f"Tabla '{table_name}' no encontrada en metadata.")
     
+    ...
+
     table = metadata.tables[table_name]
     column_names = list(table.columns.keys())
     
